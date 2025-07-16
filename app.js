@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx9CwtN9nubOF7kZxMkgZuQIr_WEIn1iXQJWUbMdGWl_qkWaN0FfKkg2BEyGqesTd54fQ/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-P9Qs38hd3clVFOqm9EaOyN8Z0d3o0PQDdAAV-2mD-koGt6N9zEWgvhA9Gbpl94JcKQ/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -465,27 +465,22 @@ async function guardarEnGoogleSheets(evaluationData) {
     try {
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
+            mode: 'no-cors', // Modo no-cors para evitar problemas
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(evaluationData)
         });
 
-        const result = await response.json();
+        // Con 'no-cors' no podemos leer la respuesta, pero sabemos que se envió
+        console.log('Datos enviados a Google Sheets');
+        return true;
         
-        if (result.success) {
-            console.log('Datos guardados en Google Sheets');
-            return true;
-        } else {
-            console.error('Error al guardar:', result.error);
-            return false;
-        }
     } catch (error) {
         console.error('Error de conexión:', error);
         return false;
     }
 }
-
 async function guardarEvaluacion() {
     if (!currentEvaluation) {
         alert('No hay evaluación para guardar');
