@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOFvEszMS7SDpIVnMyC3MeYNEV3_vxFusR-KIGfkW4OubLZZlRyqowCCMXPkhFX9UtrQ/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxzN9Xd1dW4VgutEn1VeIuQWzzu-p22O5pJDn0cI19YeUSl8ipdcfko1LpVw1oUQjzSg/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -500,22 +500,22 @@ async function guardarEnGoogleSheets(evaluationData) {
 
         // Verificar si la respuesta es OK (200-299)
         if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`Error HTTP: ${response.status} - ${errorText}`);
         }
 
         // Intentar parsear la respuesta JSON
         try {
-            const data = await response.json();
-            console.log('Datos guardados en Google Sheets:', data);
-            return true;
+            return await response.json();
         } catch (jsonError) {
-            console.log('Respuesta recibida pero no es JSON válido, posiblemente es CORS');
-            return true; // Asumir éxito en caso de CORS
+            // Si no es JSON válido pero la respuesta fue exitosa, asumir éxito
+            console.log('Respuesta no es JSON válido, pero request fue exitoso');
+            return { success: true };
         }
         
     } catch (error) {
         console.error('Error de conexión:', error);
-        return false;
+        throw error; // Propagar el error para manejarlo en guardarEvaluacion
     }
 }
 async function guardarEvaluacion() {
@@ -531,28 +531,39 @@ async function guardarEvaluacion() {
     saveBtn.disabled = true;
 
     try {
-        // Primero guardamos en Google Sheets
-        const success = await guardarEnGoogleSheets(currentEvaluation);
+        // Primero intentamos guardar en Google Sheets
+        await guardarEnGoogleSheets(currentEvaluation);
         
-        if (success) {
-            // Luego guardamos en localStorage como respaldo
-            let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
-            
-            const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
-            if (index !== -1) {
-                evaluaciones[index] = currentEvaluation;
-            } else {
-                evaluaciones.push(currentEvaluation);
-            }
-            
-            localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
-            alert('Evaluación guardada correctamente en Google Sheets y localmente!');
+        // Si llegamos aquí, el guardado en Sheets fue exitoso
+        // Ahora guardamos en localStorage como respaldo
+        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        
+        const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
+        if (index !== -1) {
+            evaluaciones[index] = currentEvaluation;
         } else {
-            alert('Error al guardar en Google Sheets. Los datos se guardaron localmente.');
+            evaluaciones.push(currentEvaluation);
         }
+        
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
+        alert('Evaluación guardada correctamente en Google Sheets y localmente!');
+        
     } catch (error) {
-        console.error('Error:', error);
-        alert('Error al guardar. Verifica la consola para más detalles.');
+        console.error('Error al guardar en Google Sheets:', error);
+        
+        // Si falla Google Sheets, guardamos solo localmente
+        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        
+        const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
+        if (index !== -1) {
+            evaluaciones[index] = currentEvaluation;
+        } else {
+            evaluaciones.push(currentEvaluation);
+        }
+        
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
+        alert('Error al guardar en Google Sheets. Los datos se guardaron localmente.');
+        
     } finally {
         // Restaurar el botón
         saveBtn.innerHTML = originalText;
@@ -560,7 +571,6 @@ async function guardarEvaluacion() {
         cargarHistorial();
     }
 }
-
 function cargarHistorial() {
     const evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
     const list = document.getElementById('evaluations-list');
