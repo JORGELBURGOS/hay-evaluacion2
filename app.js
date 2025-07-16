@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyCfvrZuAPJZLO27JWAQnX2u81SkgZJBNySaHHoCTokBnLDsB2VGCK76urq61A77KoaQA/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwl19ScFcY57emtCal4fUxzkSB76bSWbnlMRYOs3HVQhptAIQcLjcsywadIhnQSv6dyqQ/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -463,62 +463,63 @@ function mostrarResultados() {
 // =============================================
 async function guardarEnGoogleSheets(evaluationData) {
     try {
-        // Preparar los datos en el formato que espera el Google Script
-        const dataToSend = {
+        // Preparar los datos para enviar
+        const payload = {
             nombre: evaluationData.nombre,
             departamento: evaluationData.departamento,
-            nivelReporte: evaluationData.nivelReporte || 'No especificado',
+            nivelReporte: evaluationData.nivelReporte || '',
             descripcion: evaluationData.descripcion || '',
             responsabilidades: evaluationData.responsabilidades || '',
             funciones: evaluationData.funciones || '',
             competencias: evaluationData.competencias || '',
             knowHow: {
-                gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim() || '',
-                tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim() || '',
-                comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim() || '',
+                gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim(),
+                tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim(),
+                comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim(),
                 puntaje: evaluationData.knowHow.puntaje || 0
             },
             solucion: {
-                complejidad: evaluationData.solucion.complejidad.split(':')[0].trim() || '',
-                marco: evaluationData.solucion.marco.split(':')[0].trim() || '',
+                complejidad: evaluationData.solucion.complejidad.split(':')[0].trim(),
+                marco: evaluationData.solucion.marco.split(':')[0].trim(),
                 puntaje: evaluationData.solucion.puntaje || 0,
                 perfil: evaluationData.solucion.perfil || ''
             },
             responsabilidad: {
-                libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim() || '',
+                libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim(),
                 impacto: evaluationData.responsabilidad.impacto || '',
                 puntaje: evaluationData.responsabilidad.puntaje || 0
             },
             total: evaluationData.total || 0,
-            hayScore: evaluationData.hayScore || 'No calculado'
+            hayScore: evaluationData.hayScore || ''
         };
 
-        const requestOptions = {
+        // Configurar la solicitud
+        const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(dataToSend),
-            mode: 'cors'
-        };
+            body: JSON.stringify(payload)
+        });
 
-        console.log('Enviando datos a Google Sheets:', dataToSend);
-
-        const response = await fetch(SCRIPT_URL, requestOptions);
-        
+        // Verificar la respuesta
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Error HTTP ${response.status}: ${errorText}`);
+            throw new Error(`Error HTTP: ${response.status}`);
         }
 
-        return await response.json();
+        const result = await response.json();
         
+        if (!result.success) {
+            throw new Error(result.error || 'Error desconocido al guardar');
+        }
+
+        return result;
+
     } catch (error) {
         console.error('Error en guardarEnGoogleSheets:', error);
         throw error;
     }
 }
-
 async function guardarEvaluacion() {
     if (!currentEvaluation) {
         alert('No hay evaluación para guardar');
