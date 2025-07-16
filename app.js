@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7eS7Iur_gtzVwBiHK_9oqCOWLiAGCSU_mC1Bg7Qx2DAjKth_SUm1rD93R_vPsIwCgUw/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOFvEszMS7SDpIVnMyC3MeYNEV3_vxFusR-KIGfkW4OubLZZlRyqowCCMXPkhFX9UtrQ/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -465,16 +465,53 @@ async function guardarEnGoogleSheets(evaluationData) {
     try {
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Modo no-cors para evitar problemas
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(evaluationData)
+            body: JSON.stringify({
+                nombre: evaluationData.nombre,
+                departamento: evaluationData.departamento,
+                nivelReporte: evaluationData.nivelReporte,
+                descripcion: evaluationData.descripcion,
+                responsabilidades: evaluationData.responsabilidades,
+                funciones: evaluationData.funciones,
+                competencias: evaluationData.competencias,
+                knowHow: {
+                    gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim(),
+                    tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim(),
+                    comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim(),
+                    puntaje: evaluationData.knowHow.puntaje
+                },
+                solucion: {
+                    complejidad: evaluationData.solucion.complejidad.split(':')[0].trim(),
+                    marco: evaluationData.solucion.marco.split(':')[0].trim(),
+                    puntaje: evaluationData.solucion.puntaje,
+                    perfil: evaluationData.solucion.perfil
+                },
+                responsabilidad: {
+                    libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim(),
+                    impacto: evaluationData.responsabilidad.impacto,
+                    puntaje: evaluationData.responsabilidad.puntaje
+                },
+                total: evaluationData.total,
+                hayScore: evaluationData.hayScore
+            })
         });
 
-        // Con 'no-cors' no podemos leer la respuesta, pero sabemos que se envió
-        console.log('Datos enviados a Google Sheets');
-        return true;
+        // Verificar si la respuesta es OK (200-299)
+        if (!response.ok) {
+            throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        // Intentar parsear la respuesta JSON
+        try {
+            const data = await response.json();
+            console.log('Datos guardados en Google Sheets:', data);
+            return true;
+        } catch (jsonError) {
+            console.log('Respuesta recibida pero no es JSON válido, posiblemente es CORS');
+            return true; // Asumir éxito en caso de CORS
+        }
         
     } catch (error) {
         console.error('Error de conexión:', error);
