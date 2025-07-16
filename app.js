@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz-P9Qs38hd3clVFOqm9EaOyN8Z0d3o0PQDdAAV-2mD-koGt6N9zEWgvhA9Gbpl94JcKQ/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7eS7Iur_gtzVwBiHK_9oqCOWLiAGCSU_mC1Bg7Qx2DAjKth_SUm1rD93R_vPsIwCgUw/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
