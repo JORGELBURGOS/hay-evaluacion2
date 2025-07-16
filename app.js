@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwl19ScFcY57emtCal4fUxzkSB76bSWbnlMRYOs3HVQhptAIQcLjcsywadIhnQSv6dyqQ/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyGPPYg6S5Vya5PThmiRDySe8Z4eJv0vLqtOwRPmFKoHYnCJsRy1wUp0W3HUmPzpuXfHg/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -462,30 +462,29 @@ function mostrarResultados() {
 // GESTIÓN DE EVALUACIONES (INTEGRACIÓN CON GOOGLE SHEETS)
 // =============================================
 async function guardarEnGoogleSheets(evaluationData) {
+    // Mostrar en consola los datos que se enviarán
+    console.log('Preparando para enviar:', evaluationData);
+    
     try {
-        // Preparar los datos para enviar
+        // Estructura de datos simplificada pero completa
         const payload = {
             nombre: evaluationData.nombre,
             departamento: evaluationData.departamento,
             nivelReporte: evaluationData.nivelReporte || '',
             descripcion: evaluationData.descripcion || '',
-            responsabilidades: evaluationData.responsabilidades || '',
-            funciones: evaluationData.funciones || '',
-            competencias: evaluationData.competencias || '',
             knowHow: {
-                gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim(),
-                tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim(),
-                comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim(),
+                gerencial: evaluationData.knowHow.gerencial?.split(':')[0]?.trim() || '',
+                tecnica: evaluationData.knowHow.tecnica?.split(':')[0]?.trim() || '',
+                comunicacion: evaluationData.knowHow.comunicacion?.split(':')[0]?.trim() || '',
                 puntaje: evaluationData.knowHow.puntaje || 0
             },
             solucion: {
-                complejidad: evaluationData.solucion.complejidad.split(':')[0].trim(),
-                marco: evaluationData.solucion.marco.split(':')[0].trim(),
-                puntaje: evaluationData.solucion.puntaje || 0,
-                perfil: evaluationData.solucion.perfil || ''
+                complejidad: evaluationData.solucion.complejidad?.split(':')[0]?.trim() || '',
+                marco: evaluationData.solucion.marco?.split(':')[0]?.trim() || '',
+                puntaje: evaluationData.solucion.puntaje || 0
             },
             responsabilidad: {
-                libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim(),
+                libertad: evaluationData.responsabilidad.libertad?.split(':')[0]?.trim() || '',
                 impacto: evaluationData.responsabilidad.impacto || '',
                 puntaje: evaluationData.responsabilidad.puntaje || 0
             },
@@ -493,21 +492,31 @@ async function guardarEnGoogleSheets(evaluationData) {
             hayScore: evaluationData.hayScore || ''
         };
 
-        // Configurar la solicitud
+        console.log('Datos a enviar:', payload);
+
+        // Configuración de la petición con timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
+        
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
 
-        // Verificar la respuesta
         if (!response.ok) {
-            throw new Error(`Error HTTP: ${response.status}`);
+            const errorText = await response.text();
+            console.error('Error en la respuesta:', errorText);
+            throw new Error(`Error ${response.status}: ${errorText.substring(0, 100)}`);
         }
 
         const result = await response.json();
+        console.log('Respuesta del servidor:', result);
         
         if (!result.success) {
             throw new Error(result.error || 'Error desconocido al guardar');
@@ -517,7 +526,17 @@ async function guardarEnGoogleSheets(evaluationData) {
 
     } catch (error) {
         console.error('Error en guardarEnGoogleSheets:', error);
-        throw error;
+        
+        // Mostrar error al usuario de forma más descriptiva
+        let errorMessage = 'Error al conectar con Google Sheets';
+        
+        if (error.name === 'AbortError') {
+            errorMessage = 'Tiempo de espera agotado. Verifica tu conexión a internet.';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'No se pudo conectar con el servidor. Verifica la URL.';
+        }
+        
+        throw new Error(errorMessage);
     }
 }
 async function guardarEvaluacion() {
