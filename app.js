@@ -463,70 +463,55 @@ function mostrarResultados() {
 // =============================================
 async function guardarEnGoogleSheets(evaluationData) {
     try {
-        // Configuración mejorada de la solicitud
+        // Preparar los datos en el formato que espera el Google Script
+        const dataToSend = {
+            nombre: evaluationData.nombre,
+            departamento: evaluationData.departamento,
+            nivelReporte: evaluationData.nivelReporte || 'No especificado',
+            descripcion: evaluationData.descripcion || '',
+            responsabilidades: evaluationData.responsabilidades || '',
+            funciones: evaluationData.funciones || '',
+            competencias: evaluationData.competencias || '',
+            knowHow: {
+                gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim() || '',
+                tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim() || '',
+                comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim() || '',
+                puntaje: evaluationData.knowHow.puntaje || 0
+            },
+            solucion: {
+                complejidad: evaluationData.solucion.complejidad.split(':')[0].trim() || '',
+                marco: evaluationData.solucion.marco.split(':')[0].trim() || '',
+                puntaje: evaluationData.solucion.puntaje || 0,
+                perfil: evaluationData.solucion.perfil || ''
+            },
+            responsabilidad: {
+                libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim() || '',
+                impacto: evaluationData.responsabilidad.impacto || '',
+                puntaje: evaluationData.responsabilidad.puntaje || 0
+            },
+            total: evaluationData.total || 0,
+            hayScore: evaluationData.hayScore || 'No calculado'
+        };
+
         const requestOptions = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                nombre: evaluationData.nombre,
-                departamento: evaluationData.departamento,
-                nivelReporte: evaluationData.nivelReporte || 'No especificado',
-                descripcion: evaluationData.descripcion || '',
-                responsabilidades: evaluationData.responsabilidades || '',
-                funciones: evaluationData.funciones || '',
-                competencias: evaluationData.competencias || '',
-                knowHow: {
-                    gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim() || '',
-                    tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim() || '',
-                    comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim() || '',
-                    puntaje: evaluationData.knowHow.puntaje || 0
-                },
-                solucion: {
-                    complejidad: evaluationData.solucion.complejidad.split(':')[0].trim() || '',
-                    marco: evaluationData.solucion.marco.split(':')[0].trim() || '',
-                    puntaje: evaluationData.solucion.puntaje || 0,
-                    perfil: evaluationData.solucion.perfil || ''
-                },
-                responsabilidad: {
-                    libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim() || '',
-                    impacto: evaluationData.responsabilidad.impacto || '',
-                    puntaje: evaluationData.responsabilidad.puntaje || 0
-                },
-                total: evaluationData.total || 0,
-                hayScore: evaluationData.hayScore || 'No calculado'
-            }),
-            mode: 'cors' // Asegurar modo CORS
+            body: JSON.stringify(dataToSend),
+            mode: 'cors'
         };
 
-        console.log('Enviando datos a Google Sheets...', requestOptions.body);
+        console.log('Enviando datos a Google Sheets:', dataToSend);
 
-        // Intentar conectar con timeout
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout: No se pudo conectar con Google Sheets')), 10000);
-
-        const fetchPromise = fetch(SCRIPT_URL, requestOptions);
-
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
-
-        // Verificar respuesta
+        const response = await fetch(SCRIPT_URL, requestOptions);
+        
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Error en la respuesta:', errorText);
-            throw new Error(`Error HTTP ${response.status}: ${errorText.substring(0, 100)}...`);
+            throw new Error(`Error HTTP ${response.status}: ${errorText}`);
         }
 
-        // Procesar respuesta JSON
-        try {
-            const result = await response.json();
-            console.log('Respuesta exitosa de Google Sheets:', result);
-            return result;
-        } catch (jsonError) {
-            console.warn('La respuesta no es JSON válido, pero la solicitud fue exitosa');
-            return { success: true };
-        }
+        return await response.json();
         
     } catch (error) {
         console.error('Error en guardarEnGoogleSheets:', error);
