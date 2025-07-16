@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxzN9Xd1dW4VgutEn1VeIuQWzzu-p22O5pJDn0cI19YeUSl8ipdcfko1LpVw1oUQjzSg/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz1a0FCHO3LK-t6hlb5Eo7rP4F1d55MdCe29JbRXGXxLdRs_YcqT466lN8LV8a69n86eA/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -515,9 +515,10 @@ async function guardarEnGoogleSheets(evaluationData) {
         
     } catch (error) {
         console.error('Error de conexión:', error);
-        throw error; // Propagar el error para manejarlo en guardarEvaluacion
+        throw error;
     }
 }
+
 async function guardarEvaluacion() {
     if (!currentEvaluation) {
         alert('No hay evaluación para guardar');
@@ -571,6 +572,7 @@ async function guardarEvaluacion() {
         cargarHistorial();
     }
 }
+
 function cargarHistorial() {
     const evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
     const list = document.getElementById('evaluations-list');
