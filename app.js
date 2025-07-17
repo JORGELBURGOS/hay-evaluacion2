@@ -419,8 +419,12 @@ function calcularResultados() {
     const total = knowHow.puntaje + solucion.puntaje + responsabilidad.puntaje;
     const hayScore = determinarNivelHAY(total);
     
+    // Generar firma única para identificación
+    const firmaUnica = `${nombrePuesto}-${departamento}-${Date.now()}`;
+    
     currentEvaluation = {
         id: Date.now(),
+        firmaUnica: firmaUnica,
         nombre: nombrePuesto,
         departamento: departamento,
         nivelReporte: nivelReporte,
@@ -492,7 +496,9 @@ async function guardarEnGoogleSheets(evaluationData) {
             puntajeTotal: evaluationData.total,
             nivelHAY: evaluationData.hayScore,
             perfilCorto: evaluationData.solucion.perfil,
-            jsonCompleto: JSON.stringify(evaluationData)
+            jsonCompleto: JSON.stringify(evaluationData),
+            firmaUnica: evaluationData.firmaUnica,
+            id: evaluationData.id
         };
 
         // 2. Configurar la solicitud POST
@@ -512,6 +518,30 @@ async function guardarEnGoogleSheets(evaluationData) {
     } catch (error) {
         console.error('Error al guardar en Google Sheets:', error);
         throw new Error('Error de conexión. Los datos se guardaron localmente.');
+    }
+}
+
+async function eliminarEnGoogleSheets(firmaUnica) {
+    try {
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                action: 'delete',
+                firmaUnica: firmaUnica
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error en la respuesta del servidor');
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Error al eliminar en Google Sheets:', error);
+        throw error;
     }
 }
 
@@ -568,6 +598,46 @@ async function guardarEvaluacion() {
     }
 }
 
+async function eliminarEvaluacion(id) {
+    if (!confirm('¿Eliminar esta evaluación permanentemente?')) return;
+
+    const evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+    const evaluacion = evaluaciones.find(e => e.id === id);
+    
+    if (!evaluacion) {
+        alert('Evaluación no encontrada');
+        return;
+    }
+
+    const deleteBtn = event.target.closest('button');
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+    deleteBtn.disabled = true;
+
+    try {
+        // 1. Intentar eliminar en Google Sheets usando la firma única
+        await eliminarEnGoogleSheets(evaluacion.firmaUnica);
+        
+        // 2. Eliminar localmente
+        const nuevasEvaluaciones = evaluaciones.filter(e => e.id !== id);
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(nuevasEvaluaciones));
+        
+        cargarHistorial();
+        alert('Evaluación eliminada correctamente');
+        
+    } catch (error) {
+        console.error('Error al eliminar:', error);
+        // Si falla Google Sheets, eliminamos solo localmente
+        const nuevasEvaluaciones = evaluaciones.filter(e => e.id !== id);
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(nuevasEvaluaciones));
+        cargarHistorial();
+        alert('Advertencia: La evaluación solo se eliminó localmente');
+    } finally {
+        deleteBtn.innerHTML = originalText;
+        deleteBtn.disabled = false;
+    }
+}
+
 function cargarHistorial() {
     const evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
     const list = document.getElementById('evaluations-list');
@@ -612,15 +682,6 @@ function editarEvaluacion(id) {
         document.getElementById('competencia').value = eval.competencias;
         
         showStep('evaluation');
-    }
-}
-
-function eliminarEvaluacion(id) {
-    if (confirm('¿Eliminar esta evaluación permanentemente?')) {
-        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
-        evaluaciones = evaluaciones.filter(e => e.id !== id);
-        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
-        cargarHistorial();
     }
 }
 
