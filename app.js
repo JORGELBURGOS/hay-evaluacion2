@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw9BwH0MXX0k8jxoG5VEKMgNNlWmvEN-6jYta6G8tj-_fgtutUmi1hQbEaDUisYk6sWAA/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwANtbJZ4XDEIn3c6QxUjBNHa9pnYiENZFvhcGd56my3gVPFR3TMM0xzhCSw8X_ZBKIYg/exec'; 
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -463,80 +463,85 @@ function mostrarResultados() {
 // =============================================
 async function guardarEnGoogleSheets(evaluationData) {
     try {
+        // 1. Preparar los datos en el formato EXACTO que espera doPost
         const payload = {
-            id: evaluationData.id,
             nombre: evaluationData.nombre,
             departamento: evaluationData.departamento,
             nivelReporte: evaluationData.nivelReporte,
             descripcion: evaluationData.descripcion,
-            responsabilidades: evaluationData.responsabilidades,
-            funciones: evaluationData.funciones,
+            responsabilidadesClave: evaluationData.responsabilidades,
+            funcionesEspecificas: evaluationData.funciones,
             competencias: evaluationData.competencias,
             knowHow: {
-                gerencial: evaluationData.knowHow.gerencial,
-                tecnica: evaluationData.knowHow.tecnica,
-                comunicacion: evaluationData.knowHow.comunicacion,
+                gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim(),
+                tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim(),
+                comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim(),
                 puntaje: evaluationData.knowHow.puntaje
             },
             solucion: {
-                complejidad: evaluationData.solucion.complejidad,
-                marco: evaluationData.solucion.marco,
-                perfil: evaluationData.solucion.perfil,
+                complejidad: evaluationData.solucion.complejidad.split(':')[0].trim(),
+                marcoReferencia: evaluationData.solucion.marco.split(':')[0].trim(),
                 puntaje: evaluationData.solucion.puntaje
             },
             responsabilidad: {
-                libertad: evaluationData.responsabilidad.libertad,
+                libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim(),
                 impacto: evaluationData.responsabilidad.impacto,
                 puntaje: evaluationData.responsabilidad.puntaje
             },
-            total: evaluationData.total,
-            hayScore: evaluationData.hayScore
+            puntajeTotal: evaluationData.total,
+            nivelHAY: evaluationData.hayScore
         };
 
+        // 2. Configurar la solicitud POST
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify(payload)
         });
 
+        // 3. Manejar la respuesta
         if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
+            const errorText = await response.text();
+            throw new Error(`Error del servidor: ${errorText}`);
         }
 
-        return await response.json();
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || "Error desconocido al guardar");
+        }
+
+        return result;
+
     } catch (error) {
-        console.error('Error al guardar:', error);
-        throw error;
+        console.error('Error al guardar en Google Sheets:', error);
+        throw error; // Re-lanzamos para manejar en guardarEvaluacion
     }
 }
+
 async function guardarEvaluacion() {
     if (!currentEvaluation) {
         alert('No hay evaluación para guardar');
         return;
     }
 
+    // Mostrar indicador de carga
     const saveBtn = document.getElementById('save-evaluation');
     const originalText = saveBtn.innerHTML;
     saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
     saveBtn.disabled = true;
 
     try {
-        // 1. Intentar guardar en Google Sheets
-        let googleSheetsSuccess = false;
-        try {
-            const sheetsResponse = await guardarEnGoogleSheets(currentEvaluation);
-            googleSheetsSuccess = sheetsResponse?.success !== false;
-        } catch (sheetsError) {
-            console.error('Error al guardar en Google Sheets:', sheetsError);
-            googleSheetsSuccess = false;
-        }
-
-        // 2. Guardar en localStorage como respaldo
-        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
-        const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
+        // Primero intentamos guardar en Google Sheets
+        await guardarEnGoogleSheets(currentEvaluation);
         
+        // Si llegamos aquí, el guardado en Sheets fue exitoso
+        // Ahora guardamos en localStorage como respaldo
+        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        
+        const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
         if (index !== -1) {
             evaluaciones[index] = currentEvaluation;
         } else {
@@ -544,18 +549,26 @@ async function guardarEvaluacion() {
         }
         
         localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
-
-        // 3. Mostrar resultado al usuario
-        if (googleSheetsSuccess) {
-            alert('Evaluación guardada correctamente en Google Sheets y localmente');
-        } else {
-            alert('Evaluación guardada localmente. Error al conectar con Google Sheets');
-        }
+        alert('Evaluación guardada correctamente en Google Sheets y localmente!');
         
     } catch (error) {
-        console.error('Error general al guardar:', error);
-        alert('Error al guardar la evaluación. Por favor intente nuevamente.');
+        console.error('Error al guardar en Google Sheets:', error);
+        
+        // Si falla Google Sheets, guardamos solo localmente
+        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        
+        const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
+        if (index !== -1) {
+            evaluaciones[index] = currentEvaluation;
+        } else {
+            evaluaciones.push(currentEvaluation);
+        }
+        
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
+        alert('Error al guardar en Google Sheets. Los datos se guardaron localmente.');
+        
     } finally {
+        // Restaurar el botón
         saveBtn.innerHTML = originalText;
         saveBtn.disabled = false;
         cargarHistorial();
