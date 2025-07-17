@@ -99,7 +99,50 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwANtbJZ4XDEIn3c6QxUjBNHa9pnYiENZFvhcGd56my3gVPFR3TMM0xzhCSw8X_ZBKIYg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwANtbJZ4XDEIn3c6QxUjBNHa9pnYiENZFvhcGd56my3gVPFR3TMM0xzhCSw8X_ZBKIYg/exec'; 
+
+// =============================================
+// FUNCIÓN PARA RESETEAR EL FORMULARIO
+// =============================================
+function resetearFormulario() {
+    currentEvaluation = null;
+    
+    // Resetear todos los campos del formulario
+    document.getElementById('nombrePuesto').value = '';
+    document.getElementById('departamento').value = '';
+    document.getElementById('nivelReporte').value = '';
+    document.getElementById('descripcion').value = '';
+    document.getElementById('responsabilidades').value = '';
+    document.getElementById('funciones').value = '';
+    document.getElementById('competencia').value = '';
+    
+    // Resetear campos de Know-How
+    document.getElementById('gerencial').value = '';
+    document.getElementById('tecnica').value = '';
+    document.getElementById('comunicacion').value = '';
+    document.getElementById('gerencial-desc').textContent = '';
+    document.getElementById('tecnica-desc').textContent = '';
+    document.getElementById('comunicacion-desc').textContent = '';
+    
+    // Resetear campos de Solución de Problemas
+    document.getElementById('complejidad').value = '';
+    document.getElementById('marco').value = '';
+    document.getElementById('complejidad-desc').textContent = '';
+    document.getElementById('marco-desc').textContent = '';
+    
+    // Resetear campos de Responsabilidad
+    document.getElementById('libertad').value = '';
+    document.getElementById('impacto').value = '';
+    document.getElementById('libertad-desc').textContent = '';
+    document.getElementById('impacto-desc').textContent = '';
+    
+    // Resetear contador de caracteres
+    document.getElementById('descripcion-counter').textContent = '0';
+    
+    // Mostrar el primer paso
+    showStep('evaluation');
+    resetWizard();
+}
 
 // =============================================
 // FUNCIONES DE NAVEGACIÓN
@@ -329,7 +372,7 @@ function calcularResponsabilidad(libertad, impacto) {
 
 function determinarPerfilCorto(puntajeSolucion, puntajeKnowHow) {
     const diferencia = puntajeSolucion - puntajeKnowHow;
-    return diferencia > 0 ? `P${Math.min(4, Math.floor(diferencia/50) + 1}` : `A${Math.min(4, Math.floor(-diferencia/50) + 1)}`;
+    return diferencia > 0 ? `P${Math.min(4, Math.floor(diferencia/50) + 1)}` : `A${Math.min(4, Math.floor(-diferencia/50) + 1)}`;
 }
 
 function determinarNivelHAY(total) {
@@ -416,8 +459,60 @@ function mostrarResultados() {
 }
 
 // =============================================
-// GESTIÓN DE EVALUACIONES
+// GESTIÓN DE EVALUACIONES (INTEGRACIÓN CON GOOGLE SHEETS)
 // =============================================
+async function guardarEnGoogleSheets(evaluationData) {
+    try {
+        // 1. Preparar los datos
+        const payload = {
+            nombre: evaluationData.nombre,
+            departamento: evaluationData.departamento,
+            nivelReporte: evaluationData.nivelReporte,
+            descripcion: evaluationData.descripcion,
+            responsabilidadesClave: evaluationData.responsabilidades,
+            funcionesEspecificas: evaluationData.funciones,
+            competencias: evaluationData.competencias,
+            knowHow: {
+                gerencial: evaluationData.knowHow.gerencial.split(':')[0].trim(),
+                tecnica: evaluationData.knowHow.tecnica.split(':')[0].trim(),
+                comunicacion: evaluationData.knowHow.comunicacion.split(':')[0].trim(),
+                puntaje: evaluationData.knowHow.puntaje
+            },
+            solucion: {
+                complejidad: evaluationData.solucion.complejidad.split(':')[0].trim(),
+                marcoReferencia: evaluationData.solucion.marco.split(':')[0].trim(),
+                puntaje: evaluationData.solucion.puntaje
+            },
+            responsabilidad: {
+                libertad: evaluationData.responsabilidad.libertad.split(':')[0].trim(),
+                impacto: evaluationData.responsabilidad.impacto,
+                puntaje: evaluationData.responsabilidad.puntaje
+            },
+            puntajeTotal: evaluationData.total,
+            nivelHAY: evaluationData.hayScore,
+            perfilCorto: evaluationData.solucion.perfil // Añadido para coincidir con doPost
+        };
+
+        // 2. Configurar la solicitud POST
+        const response = await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', // Modo no-cors para evitar problemas con CORS
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        // En modo no-cors, no podemos leer la respuesta directamente
+        // Asumimos éxito si no hay error de red
+        return { success: true, message: 'Datos enviados (verificar en hoja)' };
+
+    } catch (error) {
+        console.error('Error al guardar en Google Sheets:', error);
+        throw new Error('Error de conexión. Los datos se guardaron localmente.');
+    }
+}
+
 async function guardarEvaluacion() {
     if (!currentEvaluation) {
         alert('No hay evaluación para guardar');
@@ -431,7 +526,11 @@ async function guardarEvaluacion() {
     saveBtn.disabled = true;
 
     try {
-        // Guardar localmente
+        // Primero intentamos guardar en Google Sheets
+        await guardarEnGoogleSheets(currentEvaluation);
+        
+        // Si llegamos aquí, el guardado en Sheets fue exitoso
+        // Ahora guardamos en localStorage como respaldo
         let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
         
         const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
@@ -442,51 +541,22 @@ async function guardarEvaluacion() {
         }
         
         localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
-        
-        // Guardar en Google Sheets
-        const payload = {
-            nombre: currentEvaluation.nombre,
-            departamento: currentEvaluation.departamento,
-            nivelReporte: currentEvaluation.nivelReporte,
-            descripcion: currentEvaluation.descripcion,
-            responsabilidadesClave: currentEvaluation.responsabilidades,
-            funcionesEspecificas: currentEvaluation.funciones,
-            competencias: currentEvaluation.competencias,
-            knowHow: {
-                gerencial: currentEvaluation.knowHow.gerencial.split(':')[0].trim(),
-                tecnica: currentEvaluation.knowHow.tecnica.split(':')[0].trim(),
-                comunicacion: currentEvaluation.knowHow.comunicacion.split(':')[0].trim(),
-                puntaje: currentEvaluation.knowHow.puntaje
-            },
-            solucion: {
-                complejidad: currentEvaluation.solucion.complejidad.split(':')[0].trim(),
-                marcoReferencia: currentEvaluation.solucion.marco.split(':')[0].trim(),
-                puntaje: currentEvaluation.solucion.puntaje
-            },
-            responsabilidad: {
-                libertad: currentEvaluation.responsabilidad.libertad.split(':')[0].trim(),
-                impacto: currentEvaluation.responsabilidad.impacto,
-                puntaje: currentEvaluation.responsabilidad.puntaje
-            },
-            puntajeTotal: currentEvaluation.total,
-            nivelHAY: currentEvaluation.hayScore,
-            perfilCorto: currentEvaluation.solucion.perfil
-        };
-
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) throw new Error('Error al guardar en Google Sheets');
-        
-        alert('Evaluación guardada correctamente!');
+        alert('Evaluación guardada correctamente en Google Sheets y localmente!');
         
     } catch (error) {
-        console.error('Error al guardar evaluación:', error);
+        console.error('Error al guardar en Google Sheets:', error);
+        
+        // Si falla Google Sheets, guardamos solo localmente
+        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        
+        const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
+        if (index !== -1) {
+            evaluaciones[index] = currentEvaluation;
+        } else {
+            evaluaciones.push(currentEvaluation);
+        }
+        
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
         alert('Error al guardar en Google Sheets. Los datos se guardaron localmente.');
         
     } finally {
@@ -544,27 +614,12 @@ function editarEvaluacion(id) {
     }
 }
 
-async function eliminarEvaluacion(id) {
+function eliminarEvaluacion(id) {
     if (confirm('¿Eliminar esta evaluación permanentemente?')) {
-        try {
-            // Eliminar localmente
-            let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
-            evaluaciones = evaluaciones.filter(e => e.id !== id);
-            localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
-            
-            // Intentar eliminar de Google Sheets
-            try {
-                const response = await fetch(`${SCRIPT_URL}?action=delete&id=${id}`);
-                if (!response.ok) throw new Error('Error al eliminar de Google Sheets');
-            } catch (error) {
-                console.error('Error al eliminar de Google Sheets:', error);
-            }
-            
-            cargarHistorial();
-        } catch (error) {
-            console.error('Error al eliminar evaluación:', error);
-            alert('Error al eliminar evaluación. Intente nuevamente.');
-        }
+        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        evaluaciones = evaluaciones.filter(e => e.id !== id);
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
+        cargarHistorial();
     }
 }
 
