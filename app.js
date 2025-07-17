@@ -99,7 +99,7 @@ const responsabilidadData = {
 // VARIABLES GLOBALES
 // =============================================
 let currentEvaluation = null;
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwANtbJZ4XDEIn3c6QxUjBNHa9pnYiENZFvhcGd56my3gVPFR3TMM0xzhCSw8X_ZBKIYg/exec'; 
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwANtbJZ4XDEIn3c6QxUjBNHa9pnYiENZFvhcGd56my3gVPFR3TMM0xzhCSw8X_ZBKIYg/exec';
 
 // =============================================
 // FUNCIÓN PARA RESETEAR EL FORMULARIO
@@ -465,6 +465,7 @@ async function guardarEnGoogleSheets(evaluationData) {
     try {
         // 1. Preparar los datos
         const payload = {
+            action: 'create',
             nombre: evaluationData.nombre,
             departamento: evaluationData.departamento,
             nivelReporte: evaluationData.nivelReporte,
@@ -490,13 +491,14 @@ async function guardarEnGoogleSheets(evaluationData) {
             },
             puntajeTotal: evaluationData.total,
             nivelHAY: evaluationData.hayScore,
-            perfilCorto: evaluationData.solucion.perfil // Añadido para coincidir con doPost
+            perfilCorto: evaluationData.solucion.perfil,
+            jsonCompleto: JSON.stringify(evaluationData)
         };
 
         // 2. Configurar la solicitud POST
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Modo no-cors para evitar problemas con CORS
+            mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -505,7 +507,7 @@ async function guardarEnGoogleSheets(evaluationData) {
 
         // En modo no-cors, no podemos leer la respuesta directamente
         // Asumimos éxito si no hay error de red
-        return { success: true, message: 'Datos enviados (verificar en hoja)' };
+        return { success: true, message: 'Datos enviados correctamente a Google Sheets' };
 
     } catch (error) {
         console.error('Error al guardar en Google Sheets:', error);
@@ -529,7 +531,6 @@ async function guardarEvaluacion() {
         // Primero intentamos guardar en Google Sheets
         await guardarEnGoogleSheets(currentEvaluation);
         
-        // Si llegamos aquí, el guardado en Sheets fue exitoso
         // Ahora guardamos en localStorage como respaldo
         let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
         
@@ -1017,6 +1018,9 @@ function setupEventListeners() {
     
     // Búsqueda
     document.getElementById('search-button').addEventListener('click', buscarEvaluaciones);
+    document.getElementById('search-eval').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') buscarEvaluaciones();
+    });
     
     // Menú principal
     document.querySelectorAll('.menu li').forEach(item => {
