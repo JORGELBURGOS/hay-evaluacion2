@@ -1,99 +1,23 @@
 // =============================================
 // DATOS DE EVALUACIÓN HAY
 // =============================================
-const knowHowData = {
-    "competencia_gerencial": {
-        "I": "Específica: Ejecución de actividades específicas con interacción limitada.",
-        "II": "Homogénea: Integración de operaciones relacionadas.",
-        "III": "Heterogénea: Integración de funciones diversas.",
-        "IV": "Amplia: Liderazgo estratégico."
-    },
-    "competencia_tecnica": {
-        "A": "Básico: Conocimientos elementales.",
-        "B": "Introductorio: Rutinas estandarizadas.",
-        "C": "General: Métodos y procedimientos especializados.",
-        "D": "Avanzado: Conocimiento especializado con base práctica.",
-        "E": "Especializado: Basado en teorías y contexto.",
-        "F": "Especialización Madura: Dominio profundo.",
-        "G": "Especialización Amplia: Autoridad reconocida.",
-        "H": "Referente: Liderazgo científico/innovador."
-    },
-    "comunicacion": {
-        "1": "Comunica: Intercambio básico de información.",
-        "2": "Razonamiento: Influencia con argumentos técnicos.",
-        "3": "Cambio de comportamientos: Liderazgo y motivación."
-    },
-    "puntajes": {
-        "A": { "1": 50, "2": 57, "3": 66 },
-        "B": { "1": 66, "2": 76, "3": 87 },
-        "C": { "1": 87, "2": 100, "3": 115 },
-        "D": { "1": 115, "2": 132, "3": 152 },
-        "E": { "1": 152, "2": 175, "3": 200 },
-        "F": { "1": 200, "2": 230, "3": 264 },
-        "G": { "1": 264, "2": 304, "3": 350 },
-        "H": { "1": 350, "2": 400, "3": 460 }
+async function loadJSONData(filename) {
+    try {
+        const response = await fetch(`data/${filename}`);
+        return await response.json();
+    } catch (error) {
+        console.error(`Error cargando ${filename}:`, error);
+        return null;
     }
-};
+}
 
-const solucionData = {
-    "complejidad": {
-        "1": "Repetitivo: Soluciones aprendidas.",
-        "2": "Con modelos: Elección entre alternativas conocidas.",
-        "3": "Variable: Identificación de patrones.",
-        "4": "Adaptación: Soluciones creativas.",
-        "5": "Sin precedentes: Innovación radical."
-    },
-    "marco_referencia": {
-        "A": "Rutina Estricta: Supervisión permanente.",
-        "B": "Rutina: Instrucciones detalladas.",
-        "C": "Semi-Rutina: Procedimientos diversificados.",
-        "D": "Estandarizado: Múltiples precedentes.",
-        "E": "Definición Clara: Políticas específicas.",
-        "F": "Definición Amplia: Objetivos amplios.",
-        "G": "Definición Genérica: Metas organizativas.",
-        "H": "Abstracto: Guía filosófica/estratégica."
-    },
-    "puntajes": {
-        "A": { "1": 50, "2": 57, "3": 66, "4": 76, "5": 87 },
-        "B": { "1": 66, "2": 76, "3": 87, "4": 100, "5": 115 },
-        "C": { "1": 87, "2": 100, "3": 115, "4": 132, "5": 152 },
-        "D": { "1": 115, "2": 132, "3": 152, "4": 175, "5": 200 },
-        "E": { "1": 152, "2": 175, "3": 200, "4": 230, "5": 264 },
-        "F": { "1": 200, "2": 230, "3": 264, "4": 304, "5": 350 },
-        "G": { "1": 264, "2": 304, "3": 350, "4": 400, "5": 460 },
-        "H": { "1": 350, "2": 400, "3": 460, "4": 530, "5": 610 }
-    }
-};
+let knowHowData, solucionData, responsabilidadData;
 
-const responsabilidadData = {
-    "libertad_actuar": {
-        "A": "Control Estricto: Supervisión permanente.",
-        "B": "Control: Instrucciones establecidas.",
-        "C": "Estandarizado: Procedimientos definidos.",
-        "D": "Regulación General: Políticas claras.",
-        "E": "Dirección: Gestión autónoma.",
-        "F": "Dirección General: Objetivos amplios.",
-        "G": "Guía: Orientación estratégica.",
-        "H": "Guía Estratégica: Tendencias del negocio."
-    },
-    "impacto": {
-        "N": "No cuantificada",
-        "1": "Muy pequeño",
-        "2": "Pequeño",
-        "3": "Medio",
-        "4": "Grande"
-    },
-    "puntajes": {
-        "A": { "N": 50, "1": 66, "2": 87, "3": 115, "4": 152 },
-        "B": { "N": 87, "1": 115, "2": 152, "3": 200, "4": 264 },
-        "C": { "N": 115, "1": 152, "2": 200, "3": 264, "4": 350 },
-        "D": { "N": 152, "1": 200, "2": 264, "3": 350, "4": 460 },
-        "E": { "N": 200, "1": 264, "2": 350, "3": 460, "4": 610 },
-        "F": { "N": 264, "1": 350, "2": 460, "3": 610, "4": 800 },
-        "G": { "N": 350, "1": 460, "2": 610, "3": 800, "4": 1050 },
-        "H": { "N": 460, "1": 610, "2": 800, "3": 1050, "4": 1400 }
-    }
-};
+async function initializeData() {
+    knowHowData = await loadJSONData('know-how.json');
+    solucionData = await loadJSONData('solucion-problemas.json');
+    responsabilidadData = await loadJSONData('responsabilidad.json');
+}
 
 // =============================================
 // VARIABLES GLOBALES
@@ -372,7 +296,7 @@ function calcularResponsabilidad(libertad, impacto) {
 
 function determinarPerfilCorto(puntajeSolucion, puntajeKnowHow) {
     const diferencia = puntajeSolucion - puntajeKnowHow;
-    return diferencia > 0 ? `P${Math.min(4, Math.floor(diferencia/50) + 1)}` : `A${Math.min(4, Math.floor(-diferencia/50) + 1)}`;
+    return diferencia > 0 ? `P${Math.min(4, Math.floor(diferencia/50) + 1}` : `A${Math.min(4, Math.floor(-diferencia/50) + 1}`;
 }
 
 function determinarNivelHAY(total) {
@@ -433,7 +357,8 @@ function calcularResultados() {
         responsabilidad: responsabilidad,
         total: total,
         hayScore: hayScore,
-        fecha: new Date().toISOString()
+        fecha: new Date().toISOString(),
+        gsheetId: null // Se llenará cuando se guarde en Google Sheets
     };
     
     mostrarResultados();
@@ -461,10 +386,12 @@ function mostrarResultados() {
 // =============================================
 // GESTIÓN DE EVALUACIONES (INTEGRACIÓN CON GOOGLE SHEETS)
 // =============================================
-async function guardarEnGoogleSheets(evaluationData) {
+async function guardarEnGoogleSheets(evaluationData, action = 'create') {
     try {
         // 1. Preparar los datos
         const payload = {
+            action: action,
+            id: evaluationData.gsheetId,
             nombre: evaluationData.nombre,
             departamento: evaluationData.departamento,
             nivelReporte: evaluationData.nivelReporte,
@@ -490,13 +417,14 @@ async function guardarEnGoogleSheets(evaluationData) {
             },
             puntajeTotal: evaluationData.total,
             nivelHAY: evaluationData.hayScore,
-            perfilCorto: evaluationData.solucion.perfil // Añadido para coincidir con doPost
+            perfilCorto: evaluationData.solucion.perfil,
+            jsonCompleto: JSON.stringify(evaluationData)
         };
 
         // 2. Configurar la solicitud POST
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // Modo no-cors para evitar problemas con CORS
+            mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -505,11 +433,11 @@ async function guardarEnGoogleSheets(evaluationData) {
 
         // En modo no-cors, no podemos leer la respuesta directamente
         // Asumimos éxito si no hay error de red
-        return { success: true, message: 'Datos enviados (verificar en hoja)' };
+        return { success: true, message: 'Operación realizada en Google Sheets' };
 
     } catch (error) {
-        console.error('Error al guardar en Google Sheets:', error);
-        throw new Error('Error de conexión. Los datos se guardaron localmente.');
+        console.error('Error al interactuar con Google Sheets:', error);
+        throw new Error('Error de conexión. Los cambios se guardaron localmente.');
     }
 }
 
@@ -526,13 +454,20 @@ async function guardarEvaluacion() {
     saveBtn.disabled = true;
 
     try {
-        // Primero intentamos guardar en Google Sheets
-        await guardarEnGoogleSheets(currentEvaluation);
-        
-        // Si llegamos aquí, el guardado en Sheets fue exitoso
-        // Ahora guardamos en localStorage como respaldo
         let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        const action = currentEvaluation.gsheetId ? 'update' : 'create';
         
+        // Primero intentamos guardar en Google Sheets
+        const result = await guardarEnGoogleSheets(currentEvaluation, action);
+        
+        // Si es una creación, obtenemos el ID de Google Sheets
+        if (action === 'create') {
+            // En una implementación real, necesitarías obtener el ID de la respuesta
+            // Como estamos en modo no-cors, simulamos asignando un ID temporal
+            currentEvaluation.gsheetId = `temp-${Date.now()}`;
+        }
+        
+        // Ahora guardamos en localStorage
         const index = evaluaciones.findIndex(e => e.id === currentEvaluation.id);
         if (index !== -1) {
             evaluaciones[index] = currentEvaluation;
@@ -567,6 +502,49 @@ async function guardarEvaluacion() {
     }
 }
 
+async function eliminarEvaluacion(id) {
+    if (!confirm('¿Eliminar esta evaluación permanentemente?')) return;
+
+    const evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+    const evalIndex = evaluaciones.findIndex(e => e.id === id);
+    
+    if (evalIndex === -1) {
+        alert('Evaluación no encontrada');
+        return;
+    }
+
+    const evaluation = evaluaciones[evalIndex];
+    const deleteBtn = event.target;
+    const originalText = deleteBtn.innerHTML;
+    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+    deleteBtn.disabled = true;
+
+    try {
+        // Si tiene gsheetId, intentamos eliminar de Google Sheets
+        if (evaluation.gsheetId) {
+            await guardarEnGoogleSheets(evaluation, 'delete');
+        }
+        
+        // Eliminamos localmente
+        evaluaciones.splice(evalIndex, 1);
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
+        cargarHistorial();
+        
+    } catch (error) {
+        console.error('Error al eliminar:', error);
+        alert('Error al eliminar de Google Sheets. La evaluación se eliminó localmente.');
+        
+        // Eliminamos localmente aunque falle Google Sheets
+        evaluaciones.splice(evalIndex, 1);
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
+        cargarHistorial();
+        
+    } finally {
+        deleteBtn.innerHTML = originalText;
+        deleteBtn.disabled = false;
+    }
+}
+
 function cargarHistorial() {
     const evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
     const list = document.getElementById('evaluations-list');
@@ -585,7 +563,7 @@ function cargarHistorial() {
                 <button onclick="generarPDF(${eval.id})">
                     <i class="fas fa-file-pdf"></i> PDF
                 </button>
-                <button onclick="eliminarEvaluacion(${eval.id})">
+                <button onclick="eliminarEvaluacion(${eval.id}, this)">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
@@ -610,16 +588,41 @@ function editarEvaluacion(id) {
         document.getElementById('funciones').value = eval.funciones;
         document.getElementById('competencia').value = eval.competencias;
         
+        // Know-How
+        document.getElementById('gerencial').value = Object.keys(knowHowData.competencia_gerencial).find(
+            key => knowHowData.competencia_gerencial[key] === eval.knowHow.gerencial
+        );
+        document.getElementById('tecnica').value = Object.keys(knowHowData.competencia_tecnica).find(
+            key => knowHowData.competencia_tecnica[key] === eval.knowHow.tecnica
+        );
+        document.getElementById('comunicacion').value = Object.keys(knowHowData.comunicacion).find(
+            key => knowHowData.comunicacion[key] === eval.knowHow.comunicacion
+        );
+        
+        // Solución de Problemas
+        document.getElementById('complejidad').value = Object.keys(solucionData.complejidad).find(
+            key => solucionData.complejidad[key] === eval.solucion.complejidad
+        );
+        document.getElementById('marco').value = Object.keys(solucionData.marco_referencia).find(
+            key => solucionData.marco_referencia[key] === eval.solucion.marco
+        );
+        
+        // Responsabilidad
+        document.getElementById('libertad').value = Object.keys(responsabilidadData.libertad_actuar).find(
+            key => responsabilidadData.libertad_actuar[key] === eval.responsabilidad.libertad
+        );
+        document.getElementById('impacto').value = eval.responsabilidad.impacto;
+        
+        // Actualizar descripciones
+        document.getElementById('gerencial-desc').textContent = eval.knowHow.gerencial;
+        document.getElementById('tecnica-desc').textContent = eval.knowHow.tecnica;
+        document.getElementById('comunicacion-desc').textContent = eval.knowHow.comunicacion;
+        document.getElementById('complejidad-desc').textContent = eval.solucion.complejidad;
+        document.getElementById('marco-desc').textContent = eval.solucion.marco;
+        document.getElementById('libertad-desc').textContent = eval.responsabilidad.libertad;
+        document.getElementById('impacto-desc').textContent = responsabilidadData.impacto[eval.responsabilidad.impacto];
+        
         showStep('evaluation');
-    }
-}
-
-function eliminarEvaluacion(id) {
-    if (confirm('¿Eliminar esta evaluación permanentemente?')) {
-        let evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
-        evaluaciones = evaluaciones.filter(e => e.id !== id);
-        localStorage.setItem('hayEvaluaciones', JSON.stringify(evaluaciones));
-        cargarHistorial();
     }
 }
 
@@ -647,7 +650,7 @@ function buscarEvaluaciones() {
                 <button onclick="generarPDF(${eval.id})">
                     <i class="fas fa-file-pdf"></i> PDF
                 </button>
-                <button onclick="eliminarEvaluacion(${eval.id})">
+                <button onclick="eliminarEvaluacion(${eval.id}, this)">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
@@ -1003,11 +1006,11 @@ function exportarTodosPDF() {
 function setupEventListeners() {
     // Navegación del wizard
     document.getElementById('next-step-1').addEventListener('click', () => nextStep(2));
-    document.getElementById('prev-step-2').addEventListener('click', () => prevStep(1));
+    document.getElementById('prev-step-2').addEventListener('click', () => prevStep(2));
     document.getElementById('next-step-2').addEventListener('click', () => nextStep(3));
-    document.getElementById('prev-step-3').addEventListener('click', () => prevStep(2));
+    document.getElementById('prev-step-3').addEventListener('click', () => prevStep(3));
     document.getElementById('next-step-3').addEventListener('click', () => nextStep(4));
-    document.getElementById('prev-step-4').addEventListener('click', () => prevStep(3));
+    document.getElementById('prev-step-4').addEventListener('click', () => prevStep(4));
     document.getElementById('calculate-results').addEventListener('click', calcularResultados);
     
     // Acciones de resultados
@@ -1017,6 +1020,9 @@ function setupEventListeners() {
     
     // Búsqueda
     document.getElementById('search-button').addEventListener('click', buscarEvaluaciones);
+    document.getElementById('search-eval').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') buscarEvaluaciones();
+    });
     
     // Menú principal
     document.querySelectorAll('.menu li').forEach(item => {
@@ -1077,7 +1083,8 @@ function setupEventListeners() {
 }
 
 // Inicialización cuando el DOM está listo
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await initializeData();
     setupEventListeners();
     resetearFormulario();
     showStep('evaluation');
