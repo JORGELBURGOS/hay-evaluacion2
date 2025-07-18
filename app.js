@@ -525,6 +525,7 @@ async function eliminarEnGoogleSheets(firmaUnica) {
     try {
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
+            mode: 'no-cors',
             headers: {
                 'Content-Type': 'application/json'
             },
@@ -534,11 +535,10 @@ async function eliminarEnGoogleSheets(firmaUnica) {
             })
         });
         
-        if (!response.ok) {
-            throw new Error('Error en la respuesta del servidor');
-        }
+        // En modo no-cors no podemos verificar response.ok
+        // Asumimos éxito si no hay error de red
+        return { success: true };
         
-        return await response.json();
     } catch (error) {
         console.error('Error al eliminar en Google Sheets:', error);
         throw error;
@@ -615,23 +615,20 @@ async function eliminarEvaluacion(id) {
     deleteBtn.disabled = true;
 
     try {
-        // 1. Intentar eliminar en Google Sheets usando la firma única
-        await eliminarEnGoogleSheets(evaluacion.firmaUnica);
-        
-        // 2. Eliminar localmente
+        // 1. Primero eliminamos localmente
         const nuevasEvaluaciones = evaluaciones.filter(e => e.id !== id);
         localStorage.setItem('hayEvaluaciones', JSON.stringify(nuevasEvaluaciones));
+        
+        // 2. Luego intentamos eliminar en Google Sheets (sin esperar respuesta)
+        eliminarEnGoogleSheets(evaluacion.firmaUnica)
+            .catch(error => console.error('Error en eliminación remota:', error));
         
         cargarHistorial();
         alert('Evaluación eliminada correctamente');
         
     } catch (error) {
         console.error('Error al eliminar:', error);
-        // Si falla Google Sheets, eliminamos solo localmente
-        const nuevasEvaluaciones = evaluaciones.filter(e => e.id !== id);
-        localStorage.setItem('hayEvaluaciones', JSON.stringify(nuevasEvaluaciones));
-        cargarHistorial();
-        alert('Advertencia: La evaluación solo se eliminó localmente');
+        alert('Error al eliminar la evaluación');
     } finally {
         deleteBtn.innerHTML = originalText;
         deleteBtn.disabled = false;
