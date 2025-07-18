@@ -372,7 +372,7 @@ function calcularResponsabilidad(libertad, impacto) {
 
 function determinarPerfilCorto(puntajeSolucion, puntajeKnowHow) {
     const diferencia = puntajeSolucion - puntajeKnowHow;
-    return diferencia > 0 ? `P${Math.min(4, Math.floor(diferencia/50) + 1)}` : `A${Math.min(4, Math.floor(-diferencia/50) + 1)}`;
+    return diferencia > 0 ? `P${Math.min(4, Math.floor(diferencia/50) + 1}` : `A${Math.min(4, Math.floor(-diferencia/50) + 1}`;
 }
 
 function determinarNivelHAY(total) {
@@ -523,22 +523,9 @@ async function guardarEnGoogleSheets(evaluationData) {
 
 async function eliminarEnGoogleSheets(firmaUnica) {
     try {
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                action: 'delete',
-                firmaUnica: firmaUnica
-            })
-        });
-        
-        // En modo no-cors no podemos verificar response.ok
-        // Asumimos éxito si no hay error de red
-        return { success: true };
-        
+        const response = await fetch(`${SCRIPT_URL}?action=delete&firmaUnica=${encodeURIComponent(firmaUnica)}`);
+        if (!response.ok) throw new Error('Error al eliminar');
+        return await response.json();
     } catch (error) {
         console.error('Error al eliminar en Google Sheets:', error);
         throw error;
@@ -619,9 +606,8 @@ async function eliminarEvaluacion(id) {
         const nuevasEvaluaciones = evaluaciones.filter(e => e.id !== id);
         localStorage.setItem('hayEvaluaciones', JSON.stringify(nuevasEvaluaciones));
         
-        // 2. Luego intentamos eliminar en Google Sheets (sin esperar respuesta)
-        eliminarEnGoogleSheets(evaluacion.firmaUnica)
-            .catch(error => console.error('Error en eliminación remota:', error));
+        // 2. Luego intentamos eliminar en Google Sheets
+        await eliminarEnGoogleSheets(evaluacion.firmaUnica);
         
         cargarHistorial();
         alert('Evaluación eliminada correctamente');
@@ -635,10 +621,37 @@ async function eliminarEvaluacion(id) {
     }
 }
 
-function cargarHistorial() {
-    const evaluaciones = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+async function cargarHistorial() {
+    try {
+        // 1. Cargar de Google Sheets (PRIMERO para tener datos frescos)
+        const response = await fetch(`${SCRIPT_URL}?action=getAll`);
+        const data = await response.json();
+        const evaluacionesRemotas = data.evaluations || [];
+        
+        // 2. Cargar de localStorage (como respaldo)
+        const evaluacionesLocales = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        
+        // 3. Combinar y eliminar duplicados (priorizando remotas)
+        const todasLasEvaluaciones = [...evaluacionesRemotas, ...evaluacionesLocales]
+            .filter((eval, index, self) => 
+                index === self.findIndex(e => e.firmaUnica === eval.firmaUnica)
+            );
+        
+        // 4. Actualizar localStorage con datos remotos (para mantener sincronización)
+        localStorage.setItem('hayEvaluaciones', JSON.stringify(todasLasEvaluaciones));
+        
+        // 5. Renderizar
+        renderEvaluaciones(todasLasEvaluaciones);
+        
+    } catch (error) {
+        console.error('Error al cargar remoto. Usando solo datos locales:', error);
+        const evaluacionesLocales = JSON.parse(localStorage.getItem('hayEvaluaciones')) || [];
+        renderEvaluaciones(evaluacionesLocales);
+    }
+}
+
+function renderEvaluaciones(evaluaciones) {
     const list = document.getElementById('evaluations-list');
-    
     list.innerHTML = evaluaciones.map(eval => `
         <div class="eval-card">
             <h3>${eval.nombre}</h3>
@@ -659,8 +672,6 @@ function cargarHistorial() {
             </div>
         </div>
     `).join('');
-    
-    showStep('history');
 }
 
 function editarEvaluacion(id) {
@@ -691,27 +702,7 @@ function buscarEvaluaciones() {
                                e.departamento.toLowerCase().includes(term)) : 
         evaluaciones;
     
-    const list = document.getElementById('evaluations-list');
-    list.innerHTML = filtered.map(eval => `
-        <div class="eval-card">
-            <h3>${eval.nombre}</h3>
-            <small>${new Date(eval.fecha).toLocaleDateString()}</small>
-            <p><strong>Departamento:</strong> ${eval.departamento}</p>
-            <p><strong>Nivel HAY:</strong> ${eval.hayScore.split(' -')[0]}</p>
-            <p>${eval.descripcion.substring(0, 80)}...</p>
-            <div class="eval-actions">
-                <button onclick="editarEvaluacion(${eval.id})">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-                <button onclick="generarPDF(${eval.id})">
-                    <i class="fas fa-file-pdf"></i> PDF
-                </button>
-                <button onclick="eliminarEvaluacion(${eval.id})">
-                    <i class="fas fa-trash"></i> Eliminar
-                </button>
-            </div>
-        </div>
-    `).join('');
+    renderEvaluaciones(filtered);
 }
 
 // =============================================
